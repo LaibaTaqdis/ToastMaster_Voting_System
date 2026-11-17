@@ -512,7 +512,7 @@
     const fmt = d => d ? new Date(d + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
     let dev = localStorage.getItem("dev"); if (!dev) { dev = crypto.randomUUID(); localStorage.setItem("dev", dev); }
     const voterUrl = () => location.origin + location.pathname;
-    const guestNav = () => nav.innerHTML = `<a class="btn sec sm" href="#admin">Admin login</a>`;
+    const guestNav = () => nav.innerHTML = `<button class="sec sm" onclick="location.hash='#admin';admin()">Login</button>`;
 
     /* ---------- Results ---------- */
     async function showResults(m, el) {
@@ -591,7 +591,7 @@
       const { data: prof, error } = await sb.from("profiles").select("role").eq("id", session.user.id).maybeSingle();
       if (!prof || prof.role !== "admin") {
         nav.innerHTML = `<button class="sec sm" id="out2">Log out</button>`;
-        app.innerHTML = `<div class="card narrow center"><h1>Access denied</h1><p class="mute">${esc(session.user.email)} does not have admin access.</p>${error ? `<p class="err">${esc(error.message)}</p>` : ""}<a class="btn sec sm" href="#">Go to voting page</a></div>`;
+        app.innerHTML = `<div class="card narrow center"><h1>Access denied</h1><p class="mute">${esc(session.user.email)} does not have admin access.</p>${error ? `<p class="err">${esc(error.message)}</p>` : ""}<button class="sec sm" onclick="location.hash='';voter()">Go to voting page</button></div>`;
         $("out2").onclick = async () => { await sb.auth.signOut(); admin(); }; return;
       }
       panel(session.user.email);
@@ -601,7 +601,7 @@
       app.innerHTML = `<div class="card narrow"><h1>Admin sign in</h1><p class="sub">For organizers only. Voters do not need an account; they scan the QR code to vote.</p>
 <label class="f" for="em">Email</label><input id="em" type="email" autocomplete="username">
 <label class="f" for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
-<p id="msg" class="err"></p><button id="go" class="full">Sign in</button></div>`;
+<p id="msg" class="err"></p><button id="go" class="full">Sign in</button><p style="text-align:center;margin-top:14px"><a href="#" class="mute" style="font-size:0.88rem" onclick="location.hash='';voter();return false;">← Back to voting page</a></p></div>`;
       const go = async () => { const { error } = await sb.auth.signInWithPassword({ email: $("em").value.trim(), password: $("pw").value }); if (error) $("msg").textContent = error.message; else admin(); };
       $("go").onclick = go; $("pw").onkeydown = e => { if (e.key === "Enter") go(); };
     }
@@ -613,8 +613,8 @@
     };
     async function panel(email) {
       email = email || curEmail; curEmail = email;
-      nav.innerHTML = `<span class="pill">${esc(email)}<b>Admin</b></span><button class="sec sm" id="out">Log out</button>`;
-      $("out").onclick = async () => { await sb.auth.signOut(); admin(); };
+      nav.innerHTML = `<span class="pill">${esc(email)}<b>Admin</b></span><button class="sec sm" onclick="location.hash='';voter()">Vote</button><button class="sec sm" id="out">Log out</button>`;
+      $("out").onclick = async () => { await sb.auth.signOut(); location.hash = ""; voter(); };
       const [{ data: ro }, { data: ms }, { data: allCs }] = await Promise.all([
         sb.from("participants").select("*").order("name"),
         sb.from("meetings").select("*").order("created_at", { ascending: false }),

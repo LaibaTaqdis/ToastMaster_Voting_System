@@ -3,7 +3,7 @@
 Sab kuch free hai: Supabase (database + admin login) + Vercel (hosting).
 
 ## Folder mein kya hai
-- `index.html` - poori app (voter page + admin panel + demo preview)
+- `index.html` - poori app (voter page + admin panel)
 - `schema.sql` - database tables
 - `README.md` - GitHub main documentation
 
@@ -54,10 +54,24 @@ Ab app live hai: `https://your-site.app/`
 ## Har meeting ka workflow (client ke liye)
 1. `https://your-site.app/#admin` > login.
 2. **New meeting**: title, date, har category mein naam likho (ek line mein ek naam). **Save meeting**.
-3. Meeting shuru hone par **Open voting** dabao. (Naya open karne se purani open meeting khud close ho jati hai.)
-4. Audience QR scan karke vote karti hai. Ek phone se har category mein ek hi vote ja sakta hai.
-5. Meeting ke end par **Close voting** dabao. Ab QR scan karne par sab ko result nazar aata hai.
-6. Admin panel ki **Meetings** list mein purane meetings ka **Results** (previous records) kisi bhi waqt dekh sakte hain.
+3. Meeting shuru hone par **Open voting** dabao.
+4. **Category Enable / Disable feature:**
+   - Open meeting ke neeche har category ka button hoga (e.g. *Best Table Topic*, *Best Prepared Speech*).
+   - Button click karke kisi bhi category ko **OPEN (green)** ya **DISABLED (gray)** kar sakte hain.
+   - **Enable All** aur **Disable All** buttons bhi hain.
+   - Voters ko sirf wohi categories nazar aayengi jo admin ne OPEN ki hongi!
+   - Table Topics khatam hone par Table Topics ko disable karein aur Prepared Speech ko enable karein. Audience asani se har round mein vote kar sakti hai.
+5. Audience QR scan karke vote karti hai. Ek phone se har category mein ek hi vote ja sakta hai.
+6. Meeting ke end par **Close voting** dabao. Ab QR scan karne par sab ko result nazar aata hai.
+7. Admin panel ki **Meetings** list mein purane meetings ka **Results** (previous records) kisi bhi waqt dekh sakte hain.
+
+---
+
+## Zaroori Step (Supabase SQL)
+Agar pehle se Supabase tables bani hui hain, to Supabase ke **SQL Editor** mein ye ek line chala do:
+```sql
+ALTER TABLE meetings ADD COLUMN IF NOT EXISTS active_categories text[];
+```
 
 Best of Big Three: TMOD, Table Topic Master, General Evaluator (teeno categories form mein already hain).
 

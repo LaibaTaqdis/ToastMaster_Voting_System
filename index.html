@@ -532,95 +532,204 @@
     }
 
     /* ---------- Voter ---------- */
-      async function voter() {
-        guestNav();
-        app.innerHTML = `<p class="mute center">Loading...</p>`;
-        const { data: ms, error } = await sb.from("meetings").select("*").neq("status", "draft").order("created_at", { ascending: false });
-        if (error) { app.innerHTML = `<div class="card"><p class="err">${esc(error.message)}</p></div>`; return; }
-        const m = (ms || []).find(x => x.status === "open") || (ms || [])[0];
-        if (!m) { app.innerHTML = `<div class="card center"><h2>No active meeting</h2><p class="mute">Voting is not open right now. Please check back during the meeting.</p></div>`; return; }
-        if (m.status === "closed") { const d = document.createElement("div"); app.innerHTML = ""; app.appendChild(d); return showResults(m, d); }
-        if (localStorage.getItem("voted_" + m.id)) { app.innerHTML = `<div class="card center hero"><h1>Thank you!</h1><p class="mute">Your vote for <b>${esc(m.title)}</b> has been recorded. Results will appear on this page when voting closes.</p></div>`; return; }
-        const { data: cs } = await sb.from("candidates").select("*").eq("meeting_id", m.id).order("name");
-        const cats = CATS.filter(([k]) => (cs || []).some(c => c.category === k));
-        let html = `<div class="card hero"><h1>${esc(m.title)}</h1><div class="sub">${fmt(m.meeting_date)} &middot; Choose one name per category. You may skip any category.</div></div>`;
-        for (const [key, label] of cats) html += `<div class="card cat"><h2>${label}</h2>` + cs.filter(c => c.category === key).map(c => `<label class="opt"><input type="radio" name="${key}" value="${c.id}">${esc(c.name)}</label>`).join("") + `</div>`;
-        html += `<div class="sticky"><div class="wrap"><span class="mute" id="cnt"></span><div><span id="msg" class="err"></span> <button id="submit">Submit vote</button></div></div></div>`;
-        app.innerHTML = html;
-        const upd = () => $("cnt").textContent = `${cats.filter(([k]) => document.querySelector(`input[name="${k}"]:checked`)).length} of ${cats.length} selected`;
-        app.addEventListener("change", upd); upd();
-        $("submit").onclick = async () => {
-          const rows = cats.map(([key]) => { const s = document.querySelector(`input[name="${key}"]:checked`); return s ? { meeting_id: m.id, category: key, candidate_id: s.value, device_id: dev } : null; }).filter(Boolean);
-          if (!rows.length) { $("msg").textContent = "Select at least one name."; return; }
-          const { error } = await sb.from("votes").insert(rows);
-          if (error && error.code !== "23505") { $("msg").textContent = error.message.includes("row-level") ? "Voting is closed." : error.message; return; }
-          localStorage.setItem("voted_" + m.id, "1"); voter();
-        };
+    async function voter() {
+      guestNav();
+      app.innerHTML = `<p class="mute center">Loading...</p>`;
+      const { data: ms, error } = await sb.from("meetings").select("*").neq("status", "draft").order("created_at", { ascending: false });
+      if (error) { app.innerHTML = `<div class="card"><p class="err">${esc(error.message)}</p></div>`; return; }
+      const m = (ms || []).find(x => x.status === "open") || (ms || [])[0];
+      if (!m) { app.innerHTML = `<div class="card center"><h2>No active meeting</h2><p class="mute">Voting is not open right now. Please check back during the meeting.</p></div>`; return; }
+      if (m.status === "closed") { const d = document.createElement("div"); app.innerHTML = ""; app.appendChild(d); return showResults(m, d); }
+      
+      const { data: cs } = await sb.from("candidates").select("*").eq("meeting_id", m.id).order("name");
+      const allMeetingCats = CATS.filter(([k]) => (cs || []).some(c => c.category === k));
+
+      // Active categories filter (admin controlled)
+      const activeKeys = Array.isArray(m.active_categories) ? m.active_categories : allMeetingCats.map(([k]) => k);
+      const openCats = allMeetingCats.filter(([k]) => activeKeys.includes(k));
+      const pendingCats = openCats.filter(([k]) => !localStorage.getItem("voted_" + m.id + "_" + k));
+
+      if (openCats.length === 0) {
+        app.innerHTML = `<div class="card center hero">
+          <h1>Voting Paused</h1>
+          <p class="mute">Voting for <b>${esc(m.title)}</b> is open, but no category is active right now.<br>Please wait for the Toastmaster to announce the voting round.</p>
+          <button class="sm sec" onclick="voter()" style="margin-top:14px">Check for Open Categories</button>
+        </div>`;
+        return;
       }
 
-      /* ---------- Admin ---------- */
-      async function admin() {
-        const { data: { session } } = await sb.auth.getSession();
-        if (!session) return loginView();
-        const { data: prof, error } = await sb.from("profiles").select("role").eq("id", session.user.id).maybeSingle();
-        if (!prof || prof.role !== "admin") {
-          nav.innerHTML = `<button class="sec sm" id="out2">Log out</button>`;
-          app.innerHTML = `<div class="card narrow center"><h1>Access denied</h1><p class="mute">${esc(session.user.email)} does not have admin access.</p>${error ? `<p class="err">${esc(error.message)}</p>` : ""}<a class="btn sec sm" href="#">Go to voting page</a></div>`;
-          $("out2").onclick = async () => { await sb.auth.signOut(); admin(); }; return;
+      if (pendingCats.length === 0) {
+        app.innerHTML = `<div class="card center hero">
+          <h1>Vote Recorded!</h1>
+          <p class="mute">Your vote for the current category in <b>${esc(m.title)}</b> has been recorded.<br>Please wait for the next voting category or final results.</p>
+          <button class="sm sec" onclick="voter()" style="margin-top:14px">Check for Next Category</button>
+        </div>`;
+        return;
+      }
+
+      let html = `<div class="card hero"><h1>${esc(m.title)}</h1><div class="sub">${fmt(m.meeting_date)} &middot; Choose one name per category. You may skip any category.</div></div>`;
+      for (const [key, label] of pendingCats) html += `<div class="card cat"><h2>${label}</h2>` + cs.filter(c => c.category === key).map(c => `<label class="opt"><input type="radio" name="${key}" value="${c.id}">${esc(c.name)}</label>`).join("") + `</div>`;
+      html += `<div class="sticky"><div class="wrap"><span class="mute" id="cnt"></span><div><span id="msg" class="err"></span> <button id="submit">Submit vote</button></div></div></div>`;
+      app.innerHTML = html;
+      const upd = () => $("cnt").textContent = `${pendingCats.filter(([k]) => document.querySelector(`input[name="${k}"]:checked`)).length} of ${pendingCats.length} selected`;
+      app.addEventListener("change", upd); upd();
+      $("submit").onclick = async () => {
+        const rows = pendingCats.map(([key]) => { const s = document.querySelector(`input[name="${key}"]:checked`); return s ? { meeting_id: m.id, category: key, candidate_id: s.value, device_id: dev } : null; }).filter(Boolean);
+        if (!rows.length) { $("msg").textContent = "Select at least one name."; return; }
+        const { error } = await sb.from("votes").insert(rows);
+        if (error && error.code !== "23505") { $("msg").textContent = error.message.includes("row-level") ? "Voting is closed." : error.message; return; }
+        rows.forEach(r => localStorage.setItem("voted_" + m.id + "_" + r.category, "1"));
+        localStorage.setItem("voted_" + m.id, "1");
+        voter();
+      };
+    }
+
+    /* ---------- Admin ---------- */
+    async function admin() {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return loginView();
+      const { data: prof, error } = await sb.from("profiles").select("role").eq("id", session.user.id).maybeSingle();
+      if (!prof || prof.role !== "admin") {
+        nav.innerHTML = `<button class="sec sm" id="out2">Log out</button>`;
+        app.innerHTML = `<div class="card narrow center"><h1>Access denied</h1><p class="mute">${esc(session.user.email)} does not have admin access.</p>${error ? `<p class="err">${esc(error.message)}</p>` : ""}<a class="btn sec sm" href="#">Go to voting page</a></div>`;
+        $("out2").onclick = async () => { await sb.auth.signOut(); admin(); }; return;
+      }
+      panel(session.user.email);
+    }
+    function loginView() {
+      guestNav();
+      app.innerHTML = `<div class="card narrow"><h1>Admin sign in</h1><p class="sub">For organizers only. Voters do not need an account; they scan the QR code to vote.</p>
+<label class="f" for="em">Email</label><input id="em" type="email" autocomplete="username">
+<label class="f" for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
+<p id="msg" class="err"></p><button id="go" class="full">Sign in</button></div>`;
+      const go = async () => { const { error } = await sb.auth.signInWithPassword({ email: $("em").value.trim(), password: $("pw").value }); if (error) $("msg").textContent = error.message; else admin(); };
+      $("go").onclick = go; $("pw").onkeydown = e => { if (e.key === "Enter") go(); };
+    }
+    let curEmail, tab = "meetings", lastTa, curMs = [], curCs = [];
+    window.go = t => { tab = t; panel(); };
+    async function panel(email) {
+      email = email || curEmail; curEmail = email;
+      nav.innerHTML = `<span class="pill">${esc(email)}<b>Admin</b></span><button class="sec sm" id="out">Log out</button>`;
+      $("out").onclick = async () => { await sb.auth.signOut(); admin(); };
+      const [{ data: ro }, { data: ms }, { data: allCs }] = await Promise.all([
+        sb.from("participants").select("*").order("name"),
+        sb.from("meetings").select("*").order("created_at", { ascending: false }),
+        sb.from("candidates").select("meeting_id,category")
+      ]);
+      curMs = ms || []; curCs = allCs || [];
+      const tabs = [["meetings", "Meetings"], ["new", "New meeting"], ["people", "Participants"], ["qr", "QR code"]];
+      let b = "";
+      if (tab === "meetings") {
+        b = `<div class="card"><h2>Meetings</h2>` + (curMs.map(m => {
+          const meetingCats = CATS.filter(([k]) => curCs.some(c => c.meeting_id === m.id && c.category === k));
+          const activeKeys = Array.isArray(m.active_categories) ? m.active_categories : meetingCats.map(([k]) => k);
+          let catControls = "";
+          if (meetingCats.length > 0 && m.status !== "closed") {
+            catControls = `
+              <div style="background:var(--soft);border-radius:10px;padding:12px;margin:10px 0 6px">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+                  <span style="font-size:0.85rem;font-weight:700">Category Voting Status (${activeKeys.length}/${meetingCats.length} Open):</span>
+                  <div class="acts">
+                    <button type="button" class="sm sec" onclick="setAllCats('${m.id}', true)">Enable All</button>
+                    <button type="button" class="sm sec" onclick="setAllCats('${m.id}', false)">Disable All</button>
+                  </div>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                  ${meetingCats.map(([k, label]) => {
+                    const isOpen = activeKeys.includes(k);
+                    return `<button type="button" class="sm ${isOpen ? "" : "sec"}" style="${isOpen ? "background:#1b7a43;border-color:#1b7a43;color:#fff;" : "opacity:0.85;"}" onclick="toggleCat('${m.id}','${k}')" title="${isOpen ? 'Click to disable' : 'Click to enable'}">
+                      ${isOpen ? '🟢 ' : '⚪ '}<b>${esc(label)}</b>: ${isOpen ? 'OPEN' : 'DISABLED'}
+                    </button>`;
+                  }).join("")}
+                </div>
+              </div>
+            `;
+          }
+          return `<div>
+            <div class="item">
+              <div><b>${esc(m.title)}</b><span class="st ${m.status}">${m.status}</span><div class="mute">${fmt(m.meeting_date)}</div></div>
+              <div class="acts">
+                ${m.status !== "open" ? `<button class="sm" onclick="setStatus('${m.id}','open')">Open voting</button>` : `<button class="sm" onclick="setStatus('${m.id}','closed')">Close voting</button>`}
+                <button class="sec sm" onclick="viewRes('${m.id}')">Results</button>
+                <button class="danger sm" onclick="delMeeting('${m.id}')">Delete</button>
+              </div>
+            </div>
+            ${catControls}
+            <div id="r_${m.id}"></div>
+          </div>`;
+        }).join("") || `<p class="mute">No meetings yet. Create one in the "New meeting" tab.</p>`) + `</div>`;
+      }
+      if (tab === "new") b = `<div class="card"><h2>New meeting</h2><div class="grid2"><div><label class="f" for="t">Title</label><input id="t" type="text" placeholder="e.g. Meeting 12"></div><div><label class="f" for="d">Date</label><input id="d" type="date"></div></div>
+  <div class="note">Type one name per line, or click a participant to add them to the box you are editing.</div>
+  <div class="chips">${(ro || []).map(p => `<button type="button" class="chip" data-n="${esc(p.name)}">${esc(p.name)}</button>`).join("") || '<span class="mute">Add participants in the Participants tab first.</span>'}</div>
+  <div class="grid2">${CATS.map(([k, l]) => `<div><label class="f" for="c_${k}">${l}</label><textarea id="c_${k}" rows="4"></textarea></div>`).join("")}</div>
+  <p id="msg" class="err"></p><button id="save">Save meeting</button></div>`;
+      if (tab === "people") b = `<div class="card"><h2>Participants (${(ro || []).length})</h2><p class="sub">Your member list. Add or remove names whenever members change.</p>
+  <textarea id="pn" rows="3" placeholder="One name per line"></textarea><button id="addp">Add names</button></div>
+  <div class="card"><div class="chips">${(ro || []).map(p => `<span class="chip">${esc(p.name)}<a href="#admin" onclick="delPart('${p.id}');return false" title="Remove">&times;</a></span>`).join("") || '<span class="mute">No participants yet.</span>'}</div></div>`;
+      if (tab === "qr") b = `<div class="card center"><h2>Voting QR code</h2><p class="sub">Print it once. It always points to the current meeting.</p><div id="qr" style="display:inline-block;padding:12px;background:#fff;border-radius:12px;margin:8px 0"></div>
+  <p class="mute">${esc(voterUrl())}</p>${/^(localhost|127\.)/.test(location.hostname) ? '<div class="note">This link only works on your computer. Deploy the site first, then download the QR code you will print.</div>' : ""}<button id="dl">Download QR code</button></div>`;
+      app.innerHTML = `<div class="tabs">${tabs.map(([k, l]) => `<button class="${tab === k ? "on" : ""}" onclick="go('${k}')">${l}</button>`).join("")}</div>` + b;
+      if ($("d")) $("d").valueAsDate = new Date();
+      document.querySelectorAll(".chip[data-n]").forEach(c => c.onclick = () => { const t = lastTa || $("c_best_table_topic"); t.value += (t.value && !t.value.endsWith("\n") ? "\n" : "") + c.dataset.n + "\n"; });
+      if ($("addp")) $("addp").onclick = async () => { const rows = $("pn").value.split("\n").map(x => x.trim()).filter(Boolean).map(name => ({ name })); if (rows.length) await sb.from("participants").upsert(rows, { onConflict: "name", ignoreDuplicates: true }); panel(); };
+      if ($("qr")) { new QRCode($("qr"), { text: voterUrl(), width: 220, height: 220 }); $("dl").onclick = () => { const c = document.querySelector("#qr canvas"); const a = document.createElement("a"); a.href = c.toDataURL("image/png"); a.download = "voting-qr.png"; a.click(); }; }
+      if ($("save")) $("save").onclick = async () => {
+        if (!$("t").value.trim()) { $("msg").textContent = "Enter a meeting title."; return; }
+        const rows = [], active_categories = [];
+        CATS.forEach(([k]) => {
+          const names = $("c_" + k).value.split("\n").map(s => s.trim()).filter(Boolean);
+          if (names.length) active_categories.push(k);
+          names.forEach(n => rows.push({ category: k, name: n }));
+        });
+        let { data: m, error } = await sb.from("meetings").insert({
+          title: $("t").value.trim(),
+          meeting_date: $("d").value,
+          active_categories: active_categories
+        }).select().single();
+        if (error && error.message && error.message.includes("active_categories")) {
+          const res2 = await sb.from("meetings").insert({ title: $("t").value.trim(), meeting_date: $("d").value }).select().single();
+          m = res2.data; error = res2.error;
         }
-        panel(session.user.email);
+        if (error) { $("msg").textContent = error.message; return; }
+        if (rows.length) {
+          rows.forEach(r => r.meeting_id = m.id);
+          await sb.from("candidates").insert(rows);
+        }
+        tab = "meetings"; panel();
+      };
+    }
+    document.addEventListener("focusin", e => { if (e.target.tagName === "TEXTAREA") lastTa = e.target; });
+    window.delPart = async id => { await sb.from("participants").delete().eq("id", id); panel(); };
+    window.setStatus = async (id, status) => { if (status === "open") await sb.from("meetings").update({ status: "closed" }).eq("status", "open"); await sb.from("meetings").update({ status }).eq("id", id); panel(); };
+    window.viewRes = async id => { const { data } = await sb.from("meetings").select("*").eq("id", id).single(); showResults(data, $("r_" + id)); };
+    window.delMeeting = async id => { if (confirm("Delete this meeting and all its votes?")) { await sb.from("meetings").delete().eq("id", id); panel(); } };
+
+    window.toggleCat = async (meetingId, catKey) => {
+      const meeting = curMs.find(x => x.id === meetingId);
+      if (!meeting) return;
+      const meetingCats = CATS.filter(([k]) => curCs.some(c => c.meeting_id === meetingId && c.category === k));
+      let list = Array.isArray(meeting.active_categories) ? [...meeting.active_categories] : meetingCats.map(([k]) => k);
+      if (list.includes(catKey)) list = list.filter(k => k !== catKey);
+      else list.push(catKey);
+      const { error } = await sb.from("meetings").update({ active_categories: list }).eq("id", meetingId);
+      if (error) {
+        alert("Error: " + error.message + "\n\nTip: Please run this line in Supabase SQL Editor if not already run:\nALTER TABLE meetings ADD COLUMN IF NOT EXISTS active_categories text[];");
+        return;
       }
-      function loginView() {
-        guestNav();
-        app.innerHTML = `<div class="card narrow"><h1>Admin sign in</h1><p class="sub">For organizers only. Voters do not need an account; they scan the QR code to vote.</p>
-  <label class="f" for="em">Email</label><input id="em" type="email" autocomplete="username">
-  <label class="f" for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
-  <p id="msg" class="err"></p><button id="go" class="full">Sign in</button></div>`;
-        const go = async () => { const { error } = await sb.auth.signInWithPassword({ email: $("em").value.trim(), password: $("pw").value }); if (error) $("msg").textContent = error.message; else admin(); };
-        $("go").onclick = go; $("pw").onkeydown = e => { if (e.key === "Enter") go(); };
+      panel();
+    };
+
+    window.setAllCats = async (meetingId, enableAll) => {
+      const meetingCats = CATS.filter(([k]) => curCs.some(c => c.meeting_id === meetingId && c.category === k));
+      const list = enableAll ? meetingCats.map(([k]) => k) : [];
+      const { error } = await sb.from("meetings").update({ active_categories: list }).eq("id", meetingId);
+      if (error) {
+        alert("Error: " + error.message + "\n\nTip: Please run this line in Supabase SQL Editor if not already run:\nALTER TABLE meetings ADD COLUMN IF NOT EXISTS active_categories text[];");
+        return;
       }
-      let curEmail, tab = "meetings", lastTa;
-      window.go = t => { tab = t; panel(); };
-      async function panel(email) {
-        email = email || curEmail; curEmail = email;
-        nav.innerHTML = `<span class="pill">${esc(email)}<b>Admin</b></span><button class="sec sm" id="out">Log out</button>`;
-        $("out").onclick = async () => { await sb.auth.signOut(); admin(); };
-        const [{ data: ro }, { data: ms }] = await Promise.all([sb.from("participants").select("*").order("name"), sb.from("meetings").select("*").order("created_at", { ascending: false })]);
-        const tabs = [["meetings", "Meetings"], ["new", "New meeting"], ["people", "Participants"], ["qr", "QR code"]];
-        let b = "";
-        if (tab === "meetings") b = `<div class="card"><h2>Meetings</h2>` + ((ms || []).map(m => `<div><div class="item"><div><b>${esc(m.title)}</b><span class="st ${m.status}">${m.status}</span><div class="mute">${fmt(m.meeting_date)}</div></div>
-    <div class="acts">${m.status !== "open" ? `<button class="sm" onclick="setStatus('${m.id}','open')">Open voting</button>` : `<button class="sm" onclick="setStatus('${m.id}','closed')">Close voting</button>`}
-    <button class="sec sm" onclick="viewRes('${m.id}')">Results</button><button class="danger sm" onclick="delMeeting('${m.id}')">Delete</button></div></div><div id="r_${m.id}"></div></div>`).join("") || `<p class="mute">No meetings yet. Create one in the "New meeting" tab.</p>`) + `</div>`;
-        if (tab === "new") b = `<div class="card"><h2>New meeting</h2><div class="grid2"><div><label class="f" for="t">Title</label><input id="t" type="text" placeholder="e.g. Meeting 12"></div><div><label class="f" for="d">Date</label><input id="d" type="date"></div></div>
-    <div class="note">Type one name per line, or click a participant to add them to the box you are editing.</div>
-    <div class="chips">${(ro || []).map(p => `<button type="button" class="chip" data-n="${esc(p.name)}">${esc(p.name)}</button>`).join("") || '<span class="mute">Add participants in the Participants tab first.</span>'}</div>
-    <div class="grid2">${CATS.map(([k, l]) => `<div><label class="f" for="c_${k}">${l}</label><textarea id="c_${k}" rows="4"></textarea></div>`).join("")}</div>
-    <p id="msg" class="err"></p><button id="save">Save meeting</button></div>`;
-        if (tab === "people") b = `<div class="card"><h2>Participants (${(ro || []).length})</h2><p class="sub">Your member list. Add or remove names whenever members change.</p>
-    <textarea id="pn" rows="3" placeholder="One name per line"></textarea><button id="addp">Add names</button></div>
-    <div class="card"><div class="chips">${(ro || []).map(p => `<span class="chip">${esc(p.name)}<a href="#admin" onclick="delPart('${p.id}');return false" title="Remove">&times;</a></span>`).join("") || '<span class="mute">No participants yet.</span>'}</div></div>`;
-        if (tab === "qr") b = `<div class="card center"><h2>Voting QR code</h2><p class="sub">Print it once. It always points to the current meeting.</p><div id="qr" style="display:inline-block;padding:12px;background:#fff;border-radius:12px;margin:8px 0"></div>
-    <p class="mute">${esc(voterUrl())}</p>${/^(localhost|127\.)/.test(location.hostname) ? '<div class="note">This link only works on your computer. Deploy the site first, then download the QR code you will print.</div>' : ""}<button id="dl">Download QR code</button></div>`;
-        app.innerHTML = `<div class="tabs">${tabs.map(([k, l]) => `<button class="${tab === k ? "on" : ""}" onclick="go('${k}')">${l}</button>`).join("")}</div>` + b;
-        if ($("d")) $("d").valueAsDate = new Date();
-        document.querySelectorAll(".chip[data-n]").forEach(c => c.onclick = () => { const t = lastTa || $("c_best_table_topic"); t.value += (t.value && !t.value.endsWith("\n") ? "\n" : "") + c.dataset.n + "\n"; });
-        if ($("addp")) $("addp").onclick = async () => { const rows = $("pn").value.split("\n").map(x => x.trim()).filter(Boolean).map(name => ({ name })); if (rows.length) await sb.from("participants").upsert(rows, { onConflict: "name", ignoreDuplicates: true }); panel(); };
-        if ($("qr")) { new QRCode($("qr"), { text: voterUrl(), width: 220, height: 220 }); $("dl").onclick = () => { const c = document.querySelector("#qr canvas"); const a = document.createElement("a"); a.href = c.toDataURL("image/png"); a.download = "voting-qr.png"; a.click(); }; }
-        if ($("save")) $("save").onclick = async () => {
-          if (!$("t").value.trim()) { $("msg").textContent = "Enter a meeting title."; return; }
-          const { data: m, error } = await sb.from("meetings").insert({ title: $("t").value.trim(), meeting_date: $("d").value }).select().single();
-          if (error) { $("msg").textContent = error.message; return; }
-          const rows = [];
-          CATS.forEach(([k]) => $("c_" + k).value.split("\n").map(s => s.trim()).filter(Boolean).forEach(n => rows.push({ meeting_id: m.id, category: k, name: n })));
-          if (rows.length) await sb.from("candidates").insert(rows);
-          tab = "meetings"; panel();
-        };
-      }
-      document.addEventListener("focusin", e => { if (e.target.tagName === "TEXTAREA") lastTa = e.target; });
-      window.delPart = async id => { await sb.from("participants").delete().eq("id", id); panel(); };
-      window.setStatus = async (id, status) => { if (status === "open") await sb.from("meetings").update({ status: "closed" }).eq("status", "open"); await sb.from("meetings").update({ status }).eq("id", id); panel(); };
-      window.viewRes = async id => { const { data } = await sb.from("meetings").select("*").eq("id", id).single(); showResults(data, $("r_" + id)); };
-      window.delMeeting = async id => { if (confirm("Delete this meeting and all its votes?")) { await sb.from("meetings").delete().eq("id", id); panel(); } };
+      panel();
+    };
 
       function route() {
         if (location.hash === "#admin") admin();

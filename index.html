@@ -605,8 +605,12 @@
       const go = async () => { const { error } = await sb.auth.signInWithPassword({ email: $("em").value.trim(), password: $("pw").value }); if (error) $("msg").textContent = error.message; else admin(); };
       $("go").onclick = go; $("pw").onkeydown = e => { if (e.key === "Enter") go(); };
     }
-    let curEmail, tab = "meetings", lastTa, curMs = [], curCs = [];
-    window.go = t => { tab = t; panel(); };
+    let curEmail, tab = "meetings", lastTa, curMs = [], curCs = [], editingMeetingId = null;
+    window.go = t => {
+      if (t === "new" && tab !== "new") editingMeetingId = null;
+      tab = t;
+      panel();
+    };
     async function panel(email) {
       email = email || curEmail; curEmail = email;
       nav.innerHTML = `<span class="pill">${esc(email)}<b>Admin</b></span><button class="sec sm" id="out">Log out</button>`;
@@ -614,81 +618,127 @@
       const [{ data: ro }, { data: ms }, { data: allCs }] = await Promise.all([
         sb.from("participants").select("*").order("name"),
         sb.from("meetings").select("*").order("created_at", { ascending: false }),
-        sb.from("candidates").select("meeting_id,category")
+        sb.from("candidates").select("id,meeting_id,category,name")
       ]);
       curMs = ms || []; curCs = allCs || [];
       const tabs = [["meetings", "Meetings"], ["new", "New meeting"], ["people", "Participants"], ["qr", "QR code"]];
       let b = "";
       if (tab === "meetings") {
-        b = `<div class="card"><h2>Meetings</h2>` + (curMs.map(m => {
-          const meetingCats = CATS.filter(([k]) => curCs.some(c => c.meeting_id === m.id && c.category === k));
-          const activeKeys = Array.isArray(m.active_categories) ? m.active_categories : meetingCats.map(([k]) => k);
-          let catControls = "";
-          if (meetingCats.length > 0 && m.status !== "closed") {
-            catControls = `
-              <div style="background:var(--soft);border-radius:10px;padding:12px;margin:10px 0 6px">
-                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-                  <span style="font-size:0.85rem;font-weight:700">Category Voting Status (${activeKeys.length}/${meetingCats.length} Open):</span>
-                  <div class="acts">
-                    <button type="button" class="sm sec" onclick="setAllCats('${m.id}', true)">Enable All</button>
-                    <button type="button" class="sm sec" onclick="setAllCats('${m.id}', false)">Disable All</button>
-                  </div>
-                </div>
-                <div style="display:flex;flex-wrap:wrap;gap:6px">
-                  ${meetingCats.map(([k, label]) => {
-                    const isOpen = activeKeys.includes(k);
-                    return `<button type="button" class="sm ${isOpen ? "" : "sec"}" style="${isOpen ? "background:#1b7a43;border-color:#1b7a43;color:#fff;" : "opacity:0.85;"}" onclick="toggleCat('${m.id}','${k}')" title="${isOpen ? 'Click to disable' : 'Click to enable'}">
-                      ${isOpen ? '🟢 ' : '⚪ '}<b>${esc(label)}</b>: ${isOpen ? 'OPEN' : 'DISABLED'}
-                    </button>`;
-                  }).join("")}
-                </div>
-              </div>
-            `;
-          }
-          return `<div>
-            <div class="item">
-              <div><b>${esc(m.title)}</b><span class="st ${m.status}">${m.status}</span><div class="mute">${fmt(m.meeting_date)}</div></div>
-              <div class="acts">
-                ${m.status !== "open" ? `<button class="sm" onclick="setStatus('${m.id}','open')">Open voting</button>` : `<button class="sm" onclick="setStatus('${m.id}','closed')">Close voting</button>`}
-                <button class="sec sm" onclick="viewRes('${m.id}')">Results</button>
-                <button class="danger sm" onclick="delMeeting('${m.id}')">Delete</button>
-              </div>
+        b = `<div class="card"><h2>Meetings</h2>` + (curMs.map(m => `<div>
+          <div class="item">
+            <div><b>${esc(m.title)}</b><span class="st ${m.status}">${m.status}</span><div class="mute">${fmt(m.meeting_date)}</div></div>
+            <div class="acts">
+              ${m.status !== "open" ? `<button class="sm" onclick="setStatus('${m.id}','open')">Open voting</button>` : `<button class="sm" onclick="setStatus('${m.id}','closed')">Close voting</button>`}
+              <button class="sec sm" onclick="editMeeting('${m.id}')">Edit</button>
+              <button class="sec sm" onclick="viewRes('${m.id}')">Results</button>
+              <button class="danger sm" onclick="delMeeting('${m.id}')">Delete</button>
             </div>
-            ${catControls}
-            <div id="r_${m.id}"></div>
-          </div>`;
-        }).join("") || `<p class="mute">No meetings yet. Create one in the "New meeting" tab.</p>`) + `</div>`;
+          </div>
+          <div id="r_${m.id}"></div>
+        </div>`).join("") || `<p class="mute">No meetings yet. Create one in the "New meeting" tab.</p>`) + `</div>`;
       }
-      if (tab === "new") b = `<div class="card"><h2>New meeting</h2><div class="grid2"><div><label class="f" for="t">Title</label><input id="t" type="text" placeholder="e.g. Meeting 12"></div><div><label class="f" for="d">Date</label><input id="d" type="date"></div></div>
-  <div class="note">Type one name per line, or click a participant to add them to the box you are editing.</div>
-  <div class="chips">${(ro || []).map(p => `<button type="button" class="chip" data-n="${esc(p.name)}">${esc(p.name)}</button>`).join("") || '<span class="mute">Add participants in the Participants tab first.</span>'}</div>
-  <div class="grid2">${CATS.map(([k, l]) => `<div><label class="f" for="c_${k}">${l}</label><textarea id="c_${k}" rows="4"></textarea></div>`).join("")}</div>
-  <p id="msg" class="err"></p><button id="save">Save meeting</button></div>`;
+      if (tab === "new") {
+        const isEditing = Boolean(editingMeetingId);
+        const editM = isEditing ? curMs.find(x => x.id === editingMeetingId) : null;
+        newCatDisabled = {};
+
+        b = `<div class="card">
+          <h2>${isEditing ? `Edit meeting &middot; <span class="mute">${esc(editM ? editM.title : "")}</span>` : "New meeting"}</h2>
+          <div class="grid2">
+            <div><label class="f" for="t">Title</label><input id="t" type="text" placeholder="e.g. Meeting 12" value="${isEditing && editM ? esc(editM.title) : ""}"></div>
+            <div><label class="f" for="d">Date</label><input id="d" type="date" value="${isEditing && editM && editM.meeting_date ? editM.meeting_date : ""}"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px;flex-wrap:wrap;gap:8px">
+            <span style="font-weight:700;font-size:0.95rem">Voting Categories (Enable or Disable per category):</span>
+            <div class="acts">
+              <button type="button" class="sm sec" onclick="toggleAllNewCats(true)">Enable All</button>
+              <button type="button" class="sm sec" onclick="toggleAllNewCats(false)">Disable All</button>
+            </div>
+          </div>
+          <div class="grid2">
+            ${CATS.map(([k, l]) => {
+              const catCs = isEditing ? curCs.filter(c => c.meeting_id === editingMeetingId && c.category === k) : [];
+              const catText = catCs.map(c => c.name).join("\n");
+              const isEnabled = isEditing 
+                ? (Array.isArray(editM && editM.active_categories) ? editM.active_categories.includes(k) : catCs.length > 0)
+                : true;
+              newCatDisabled[k] = !isEnabled;
+              return `
+                <div class="card" id="card_${k}" style="padding:12px;margin:6px 0;transition:0.2s;${isEnabled ? "" : "opacity:0.45;"}">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <label class="f" for="c_${k}" style="margin:0;font-size:0.88rem"><b>${esc(l)}</b></label>
+                    <button type="button" class="sm ${isEnabled ? "" : "sec"}" id="btn_toggle_${k}" onclick="toggleNewCat('${k}')" style="${isEnabled ? "background:#1b7a43;border-color:#1b7a43;color:#fff;" : "background:transparent;border-color:var(--line);color:var(--mute);"}padding:3px 10px;font-size:0.75rem">
+                      ${isEnabled ? "🟢 ENABLED" : "⚪ DISABLED"}
+                    </button>
+                  </div>
+                  <textarea id="c_${k}" rows="3" placeholder="${isEnabled ? "Type nominee names (one per line)" : "Category disabled for this meeting"}" ${isEnabled ? "" : "disabled"}>${esc(catText)}</textarea>
+                </div>
+              `;
+            }).join("")}
+          </div>
+          <p id="msg" class="err"></p>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+            <button id="save">${isEditing ? "Update meeting" : "Save meeting"}</button>
+            ${isEditing ? `<button type="button" class="sec" onclick="cancelEdit()">Cancel</button>` : ""}
+          </div>
+        </div>`;
+      }
       if (tab === "people") b = `<div class="card"><h2>Participants (${(ro || []).length})</h2><p class="sub">Your member list. Add or remove names whenever members change.</p>
   <textarea id="pn" rows="3" placeholder="One name per line"></textarea><button id="addp">Add names</button></div>
   <div class="card"><div class="chips">${(ro || []).map(p => `<span class="chip">${esc(p.name)}<a href="#admin" onclick="delPart('${p.id}');return false" title="Remove">&times;</a></span>`).join("") || '<span class="mute">No participants yet.</span>'}</div></div>`;
       if (tab === "qr") b = `<div class="card center"><h2>Voting QR code</h2><p class="sub">Print it once. It always points to the current meeting.</p><div id="qr" style="display:inline-block;padding:12px;background:#fff;border-radius:12px;margin:8px 0"></div>
   <p class="mute">${esc(voterUrl())}</p>${/^(localhost|127\.)/.test(location.hostname) ? '<div class="note">This link only works on your computer. Deploy the site first, then download the QR code you will print.</div>' : ""}<button id="dl">Download QR code</button></div>`;
       app.innerHTML = `<div class="tabs">${tabs.map(([k, l]) => `<button class="${tab === k ? "on" : ""}" onclick="go('${k}')">${l}</button>`).join("")}</div>` + b;
-      if ($("d")) $("d").valueAsDate = new Date();
-      document.querySelectorAll(".chip[data-n]").forEach(c => c.onclick = () => { const t = lastTa || $("c_best_table_topic"); t.value += (t.value && !t.value.endsWith("\n") ? "\n" : "") + c.dataset.n + "\n"; });
+      if ($("d") && !editingMeetingId) $("d").valueAsDate = new Date();
       if ($("addp")) $("addp").onclick = async () => { const rows = $("pn").value.split("\n").map(x => x.trim()).filter(Boolean).map(name => ({ name })); if (rows.length) await sb.from("participants").upsert(rows, { onConflict: "name", ignoreDuplicates: true }); panel(); };
       if ($("qr")) { new QRCode($("qr"), { text: voterUrl(), width: 220, height: 220 }); $("dl").onclick = () => { const c = document.querySelector("#qr canvas"); const a = document.createElement("a"); a.href = c.toDataURL("image/png"); a.download = "voting-qr.png"; a.click(); }; }
       if ($("save")) $("save").onclick = async () => {
-        if (!$("t").value.trim()) { $("msg").textContent = "Enter a meeting title."; return; }
+        const title = $("t").value.trim();
+        const dateVal = $("d").value;
+        if (!title) { $("msg").textContent = "Enter a meeting title."; return; }
         const rows = [], active_categories = [];
         CATS.forEach(([k]) => {
+          if (newCatDisabled[k]) return;
           const names = $("c_" + k).value.split("\n").map(s => s.trim()).filter(Boolean);
           if (names.length) active_categories.push(k);
           names.forEach(n => rows.push({ category: k, name: n }));
         });
+
+        if (editingMeetingId) {
+          let { error: mErr } = await sb.from("meetings").update({
+            title: title,
+            meeting_date: dateVal,
+            active_categories: active_categories
+          }).eq("id", editingMeetingId);
+          if (mErr && mErr.message && mErr.message.includes("active_categories")) {
+            const res2 = await sb.from("meetings").update({ title: title, meeting_date: dateVal }).eq("id", editingMeetingId);
+            mErr = res2.error;
+          }
+          if (mErr) { $("msg").textContent = mErr.message; return; }
+
+          const { data: existingCs } = await sb.from("candidates").select("*").eq("meeting_id", editingMeetingId);
+          const existing = existingCs || [];
+          const toRemove = existing.filter(ex => !rows.some(r => r.category === ex.category && r.name === ex.name));
+          if (toRemove.length) {
+            await sb.from("candidates").delete().in("id", toRemove.map(x => x.id));
+          }
+          const toAdd = rows.filter(r => !existing.some(ex => ex.category === r.category && ex.name === r.name)).map(r => ({ ...r, meeting_id: editingMeetingId }));
+          if (toAdd.length) {
+            await sb.from("candidates").insert(toAdd);
+          }
+          editingMeetingId = null;
+          tab = "meetings";
+          panel();
+          return;
+        }
+
         let { data: m, error } = await sb.from("meetings").insert({
-          title: $("t").value.trim(),
-          meeting_date: $("d").value,
+          title: title,
+          meeting_date: dateVal,
           active_categories: active_categories
         }).select().single();
         if (error && error.message && error.message.includes("active_categories")) {
-          const res2 = await sb.from("meetings").insert({ title: $("t").value.trim(), meeting_date: $("d").value }).select().single();
+          const res2 = await sb.from("meetings").insert({ title: title, meeting_date: dateVal }).select().single();
           m = res2.data; error = res2.error;
         }
         if (error) { $("msg").textContent = error.message; return; }
@@ -699,43 +749,51 @@
         tab = "meetings"; panel();
       };
     }
-    document.addEventListener("focusin", e => { if (e.target.tagName === "TEXTAREA") lastTa = e.target; });
     window.delPart = async id => { await sb.from("participants").delete().eq("id", id); panel(); };
     window.setStatus = async (id, status) => { if (status === "open") await sb.from("meetings").update({ status: "closed" }).eq("status", "open"); await sb.from("meetings").update({ status }).eq("id", id); panel(); };
     window.viewRes = async id => { const { data } = await sb.from("meetings").select("*").eq("id", id).single(); showResults(data, $("r_" + id)); };
     window.delMeeting = async id => { if (confirm("Delete this meeting and all its votes?")) { await sb.from("meetings").delete().eq("id", id); panel(); } };
+    window.editMeeting = (id) => { editingMeetingId = id; tab = "new"; panel(); };
+    window.cancelEdit = () => { editingMeetingId = null; tab = "meetings"; panel(); };
 
-    window.toggleCat = async (meetingId, catKey) => {
-      const meeting = curMs.find(x => x.id === meetingId);
-      if (!meeting) return;
-      const meetingCats = CATS.filter(([k]) => curCs.some(c => c.meeting_id === meetingId && c.category === k));
-      let list = Array.isArray(meeting.active_categories) ? [...meeting.active_categories] : meetingCats.map(([k]) => k);
-      if (list.includes(catKey)) list = list.filter(k => k !== catKey);
-      else list.push(catKey);
-      const { error } = await sb.from("meetings").update({ active_categories: list }).eq("id", meetingId);
-      if (error) {
-        alert("Error: " + error.message + "\n\nTip: Please run this line in Supabase SQL Editor if not already run:\nALTER TABLE meetings ADD COLUMN IF NOT EXISTS active_categories text[];");
-        return;
+    let newCatDisabled = {};
+    window.toggleNewCat = (k) => {
+      newCatDisabled[k] = !newCatDisabled[k];
+      const btn = $("btn_toggle_" + k);
+      const ta = $("c_" + k);
+      const card = $("card_" + k);
+      if (newCatDisabled[k]) {
+        btn.textContent = "⚪ DISABLED";
+        btn.className = "sm sec";
+        btn.style.background = "transparent";
+        btn.style.borderColor = "var(--line)";
+        btn.style.color = "var(--mute)";
+        ta.disabled = true;
+        ta.placeholder = "Category disabled for this meeting";
+        card.style.opacity = "0.45";
+      } else {
+        btn.textContent = "🟢 ENABLED";
+        btn.className = "sm";
+        btn.style.background = "#1b7a43";
+        btn.style.borderColor = "#1b7a43";
+        btn.style.color = "#fff";
+        ta.disabled = false;
+        ta.placeholder = "Type nominee names (one per line)";
+        card.style.opacity = "1";
       }
-      panel();
+    };
+    window.toggleAllNewCats = (enableAll) => {
+      CATS.forEach(([k]) => {
+        if (enableAll && newCatDisabled[k]) toggleNewCat(k);
+        if (!enableAll && !newCatDisabled[k]) toggleNewCat(k);
+      });
     };
 
-    window.setAllCats = async (meetingId, enableAll) => {
-      const meetingCats = CATS.filter(([k]) => curCs.some(c => c.meeting_id === meetingId && c.category === k));
-      const list = enableAll ? meetingCats.map(([k]) => k) : [];
-      const { error } = await sb.from("meetings").update({ active_categories: list }).eq("id", meetingId);
-      if (error) {
-        alert("Error: " + error.message + "\n\nTip: Please run this line in Supabase SQL Editor if not already run:\nALTER TABLE meetings ADD COLUMN IF NOT EXISTS active_categories text[];");
-        return;
-      }
-      panel();
-    };
-
-      function route() {
-        if (location.hash === "#admin") admin();
-        else voter();
-      }
-      window.addEventListener("hashchange", route); route();
+    function route() {
+      if (location.hash === "#admin") admin();
+      else voter();
+    }
+    window.addEventListener("hashchange", route); route();
   </script>
 </body>
 

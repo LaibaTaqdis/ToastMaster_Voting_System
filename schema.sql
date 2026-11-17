@@ -51,3 +51,6 @@ language sql security definer set search_path = public as $$
     and ((select status from meetings where id = m) = 'closed' or is_admin())
   group by c.category, c.id, c.name
 $$;
+
+-- 5) Category-level voting control: admin can open/disable individual categories
+alter table meetings add column if not exists active_categories text[];

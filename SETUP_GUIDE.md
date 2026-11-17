@@ -3,7 +3,7 @@
 Everything used in this project is 100% free: **Supabase** (database + admin authentication) and **Vercel / Netlify** (hosting).
 
 ## Files in This Repository
-- `index.html` - The complete application (voter interface + admin dashboard + demo preview)
+- `index.html` - The complete application (voter interface + admin dashboard)
 - `schema.sql` - Database schema, security policies, and tabulation function
 - `README.md` - Main project documentation
 - `SETUP_GUIDE.md` - Step-by-step setup guide (English)
@@ -64,10 +64,24 @@ Your application is now live at `https://your-site.app/`!
 ## Workflow for Every Meeting (For the Organizer / Client)
 1. Visit `https://your-site.app/#admin` and log in.
 2. **Create New Meeting**: Enter the meeting title, date, and nominee names for each category (one name per line). Click **Save meeting**.
-3. When the meeting starts or reaches the voting segment, click **Open voting**. *(Opening a new meeting automatically closes any previously open meeting).*
-4. The audience scans the table QR code on their mobile phones to cast their votes. Each phone/browser is restricted to one vote per category.
-5. At the end of the voting segment, click **Close voting**. Anyone scanning the QR code or refreshing their page will now immediately see the results and designated winners.
-6. Organizers can view past meeting results at any time by clicking **Results** under the **Meetings** list in the admin panel.
+3. When the meeting starts, click **Open voting**.
+4. **Category-Level Voting Control (Enable / Disable per Category):**
+   - Under the open meeting, you will see buttons for every category (e.g., *Best Table Topic*, *Best Prepared Speech*, *Best Evaluator*).
+   - Click any category button to toggle it **OPEN (green)** or **DISABLED (gray)**.
+   - You can also click **Enable All** or **Disable All**.
+   - Voters will **ONLY** see the categories you have enabled!
+   - When one category's voting finishes (e.g., Table Topics), disable it and enable the next category (e.g., Prepared Speeches). Attendees can vote in each round without being blocked.
+5. The audience scans the table QR code on their mobile phones to cast their votes. Each phone/browser is restricted to one vote per category.
+6. At the end of the meeting, click **Close voting**. Anyone scanning the QR code or refreshing their page will now immediately see the results and designated winners.
+7. Organizers can view past meeting results at any time by clicking **Results** under the **Meetings** list in the admin panel.
+
+---
+
+## Database Migration for Category Controls
+If you previously created the Supabase tables, run this one line in **Supabase SQL Editor**:
+```sql
+ALTER TABLE meetings ADD COLUMN IF NOT EXISTS active_categories text[];
+```
 
 *Award categories include:* Best Table Topic Speaker, Best Prepared Speaker, Best Evaluator, Best Facilitator / Auxiliary Role, and Best of Big Three (TMOD, Table Topic Master, and General Evaluator).
 

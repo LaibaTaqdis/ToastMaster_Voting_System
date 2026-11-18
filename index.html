@@ -9,104 +9,84 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
-      --bg: #f3f5f8;
-      --card: #fff;
-      --ink: #14202b;
-      --mute: #5f6b7a;
-      --line: #e2e7ee;
-      --brand: #004165;
-      --accent: #772432;
-      --soft: #e8f0f6;
-      --win: #eaf6ef;
-      --winc: #1b7a43;
-      --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 16px rgba(16, 24, 40, .05)
+      --bg: #f3f5f8; --card: #fff; --ink: #14202b; --mute: #5f6b7a; --line: #e2e7ee;
+      --brand: #004165; --accent: #772432; --soft: #e8f0f6; --win: #eaf6ef; --winc: #1b7a43;
+      --shadow: 0 1px 2px rgba(16,24,40,.06), 0 4px 16px rgba(16,24,40,.05)
     }
-
     @media(prefers-color-scheme:dark) {
       :root {
-        --bg: #0f141a;
-        --card: #18202a;
-        --ink: #eef2f7;
-        --mute: #9aa6b5;
-        --line: #27313d;
-        --brand: #5aa9d6;
-        --accent: #e0899a;
-        --soft: #1c2a37;
-        --win: #152a1e;
-        --winc: #5fd08c;
-        --shadow: none
+        --bg:#0f141a; --card:#18202a; --ink:#eef2f7; --mute:#9aa6b5; --line:#27313d;
+        --brand:#5aa9d6; --accent:#e0899a; --soft:#1c2a37; --win:#152a1e; --winc:#5fd08c; --shadow:none
       }
     }
-
     * { box-sizing: border-box }
-    body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased }
-    .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px }
-    header.top { background: #004165; color: #fff; border-bottom: 3px solid #772432; position: sticky; top: 0; z-index: 5 }
-    header.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 58px; gap: 10px }
-    .brand { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font-weight: 700; letter-spacing: .2px; min-width: 0 }
-    .brand span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-    .logo { width: 32px; height: 32px; border-radius: 8px; background: #fff; color: #004165; display: grid; place-items: center; font-weight: 800; flex: none }
-    #nav { display: flex; align-items: center; gap: 8px; flex: none }
-    .pill { font-size: .8rem; background: rgba(255,255,255,.14); padding: 4px 10px; border-radius: 99px; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-    .pill b { background: #fff; color: #004165; border-radius: 99px; padding: 1px 7px; margin-left: 4px; font-size: .7rem; text-transform: uppercase }
-    #app { padding: 22px 0 90px }
-    h1 { font-size: 1.45rem; margin: 0 0 4px; line-height: 1.25 }
-    h2 { font-size: 1.05rem; margin: 0 0 12px }
-    h3 { font-size: .95rem; margin: 0 0 6px }
-    .sub, .mute { color: var(--mute); font-size: .92rem }
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 14px 0; box-shadow: var(--shadow) }
-    .hero { border-left: 4px solid var(--accent) }
-    .narrow { max-width: 400px; margin: 48px auto }
-    .center { text-align: center }
-    label.f { display: block; font-weight: 600; font-size: .85rem; margin: 10px 0 2px }
-    input[type=text], input[type=email], input[type=password], input[type=date], textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); font: inherit; margin: 2px 0 6px }
-    textarea { resize: vertical }
-    .btn, button { background: var(--brand); color: #fff; border: 1px solid transparent; border-radius: 10px; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; line-height: 1.3 }
-    button:hover, .btn:hover { filter: brightness(1.1) }
-    .sec { background: transparent !important; color: var(--ink) !important; border-color: var(--line) }
-    header .sec { color: #fff !important; border-color: rgba(255,255,255,.4) }
-    .danger { background: #b42318 !important; color: #fff !important }
-    .sm { padding: 6px 12px; font-size: .85rem }
-    .full { width: 100%; padding: 12px }
-    button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible { outline: 3px solid #5aa9d6; outline-offset: 2px }
-    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 6px; overflow-x: auto }
-    .tabs button { background: none; color: var(--mute); border: 0; border-bottom: 3px solid transparent; border-radius: 0; padding: 10px 14px; white-space: nowrap }
-    .tabs button.on { color: var(--brand); border-color: var(--accent) }
-    .item { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid var(--line) }
-    .item:first-of-type { border-top: 0 }
-    .acts { display: flex; gap: 6px; flex-wrap: wrap }
-    .st { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 2px 9px; border-radius: 99px; background: var(--soft); color: var(--brand); margin-left: 6px; vertical-align: middle }
-    .st.open { background: var(--win); color: var(--winc) }
-    .chips { display: flex; flex-wrap: wrap; gap: 6px }
-    .chip { background: var(--soft); color: var(--brand); border: 0; border-radius: 99px; padding: 5px 12px; font-size: .85rem; font-weight: 600 }
-    .chip a { color: var(--accent); margin-left: 6px; text-decoration: none; font-weight: 700 }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px }
-    @media(max-width:600px) { .grid2 { grid-template-columns: 1fr } .pill { display: none } }
-    .cat { padding: 16px 18px }
-    .cat h2 { display: flex; justify-content: space-between; align-items: center }
-    label.opt { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 10px; margin: 8px 0; cursor: pointer; transition: .15s }
-    label.opt:hover { border-color: var(--brand) }
-    label.opt:has(input:checked) { border-color: var(--brand); background: var(--soft); font-weight: 600 }
-    label.opt input { accent-color: var(--brand); width: 18px; height: 18px }
-    .sticky { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line); padding: 12px 0; z-index: 4 }
-    .sticky .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px }
-    .row { padding: 8px 10px; border-radius: 10px; margin: 4px 0 }
-    .row.w { background: var(--win) }
-    .row .l { display: flex; justify-content: space-between; gap: 8px }
-    .tag { font-size: .7rem; font-weight: 700; color: var(--winc); text-transform: uppercase; margin-left: 8px }
-    .bar { height: 7px; background: var(--line); border-radius: 4px; margin-top: 6px }
-    .bar i { display: block; height: 100%; background: var(--brand); border-radius: 4px }
-    .row.w .bar i { background: var(--winc) }
-    .err { color: #b42318; font-size: .9rem; min-height: 1.2em }
-    .note { background: var(--soft); border-radius: 10px; padding: 10px 12px; font-size: .9rem; margin: 10px 0 }
-    footer { text-align: center; color: var(--mute); font-size: .8rem; padding: 0 0 24px }
-    footer a { color: var(--mute) }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; -webkit-font-smoothing:antialiased }
+    .wrap { max-width:760px; margin:0 auto; padding:0 16px }
+    header.top { background:#004165; color:#fff; border-bottom:3px solid #772432; position:sticky; top:0; z-index:5 }
+    header.top .wrap { display:flex; align-items:center; justify-content:space-between; height:58px; gap:10px }
+    .brand { display:flex; align-items:center; gap:10px; color:#fff; text-decoration:none; font-weight:700; letter-spacing:.2px; min-width:0 }
+    .brand span:last-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+    .logo { width:32px; height:32px; border-radius:8px; background:#fff; color:#004165; display:grid; place-items:center; font-weight:800; flex:none }
+    #nav { display:flex; align-items:center; gap:8px; flex:none }
+    .pill { font-size:.8rem; background:rgba(255,255,255,.14); padding:4px 10px; border-radius:99px; max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+    .pill b { background:#fff; color:#004165; border-radius:99px; padding:1px 7px; margin-left:4px; font-size:.7rem; text-transform:uppercase }
+    #app { padding:22px 0 90px }
+    h1 { font-size:1.45rem; margin:0 0 4px; line-height:1.25 }
+    h2 { font-size:1.05rem; margin:0 0 12px }
+    .sub, .mute { color:var(--mute); font-size:.92rem }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin:14px 0; box-shadow:var(--shadow) }
+    .hero { border-left:4px solid var(--accent) }
+    .narrow { max-width:400px; margin:48px auto }
+    .center { text-align:center }
+    label.f { display:block; font-weight:600; font-size:.85rem; margin:10px 0 2px }
+    input[type=text], input[type=email], input[type=password], input[type=date], textarea { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); font:inherit; margin:2px 0 6px }
+    textarea { resize:vertical }
+    .btn, button { background:var(--brand); color:#fff; border:1px solid transparent; border-radius:10px; padding:9px 16px; font:inherit; font-weight:600; cursor:pointer; text-decoration:none; display:inline-block; line-height:1.3 }
+    button:hover, .btn:hover { filter:brightness(1.1) }
+    .sec { background:transparent !important; color:var(--ink) !important; border-color:var(--line) }
+    header .sec { color:#fff !important; border-color:rgba(255,255,255,.4) }
+    .danger { background:#b42318 !important; color:#fff !important }
+    .sm { padding:6px 12px; font-size:.85rem }
+    .full { width:100%; padding:12px }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible { outline:3px solid #5aa9d6; outline-offset:2px }
+    .tabs { display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:6px; overflow-x:auto }
+    .tabs button { background:none; color:var(--mute); border:0; border-bottom:3px solid transparent; border-radius:0; padding:10px 14px; white-space:nowrap }
+    .tabs button.on { color:var(--brand); border-color:var(--accent) }
+    .item { display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; align-items:center; padding:14px 0; border-top:1px solid var(--line) }
+    .item:first-of-type { border-top:0 }
+    .acts { display:flex; gap:6px; flex-wrap:wrap }
+    .st { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; padding:2px 9px; border-radius:99px; background:var(--soft); color:var(--brand); margin-left:6px; vertical-align:middle }
+    .st.open { background:var(--win); color:var(--winc) }
+    .chips { display:flex; flex-wrap:wrap; gap:6px }
+    .chip { background:var(--soft); color:var(--brand); border:0; border-radius:99px; padding:5px 12px; font-size:.85rem; font-weight:600 }
+    .chip a { color:var(--accent); margin-left:6px; text-decoration:none; font-weight:700 }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 14px }
+    @media(max-width:600px) { .grid2 { grid-template-columns:1fr } .pill { display:none } }
+    .cat { padding:16px 18px }
+    .cat h2 { display:flex; justify-content:space-between; align-items:center }
+    label.opt { display:flex; gap:12px; align-items:center; padding:12px 14px; border:1.5px solid var(--line); border-radius:10px; margin:8px 0; cursor:pointer; transition:.15s }
+    label.opt:hover { border-color:var(--brand) }
+    label.opt:has(input:checked) { border-color:var(--brand); background:var(--soft); font-weight:600 }
+    label.opt input { accent-color:var(--brand); width:18px; height:18px }
+    .sticky { position:fixed; left:0; right:0; bottom:0; background:var(--card); border-top:1px solid var(--line); padding:12px 0; z-index:4 }
+    .sticky .wrap { display:flex; align-items:center; justify-content:space-between; gap:12px }
+    .row { padding:8px 10px; border-radius:10px; margin:4px 0 }
+    .row.w { background:var(--win) }
+    .row .l { display:flex; justify-content:space-between; gap:8px }
+    .tag { font-size:.7rem; font-weight:700; color:var(--winc); text-transform:uppercase; margin-left:8px }
+    .bar { height:7px; background:var(--line); border-radius:4px; margin-top:6px }
+    .bar i { display:block; height:100%; background:var(--brand); border-radius:4px }
+    .row.w .bar i { background:var(--winc) }
+    .err { color:#b42318; font-size:.9rem; min-height:1.2em }
+    .note { background:var(--soft); border-radius:10px; padding:10px 12px; font-size:.9rem; margin:10px 0 }
+    footer { text-align:center; color:var(--mute); font-size:.8rem; padding:0 0 24px }
   </style>
 </head>
 
 <body>
   <header class="top">
-    <div class="wrap"><a class="brand" href="#"><span class="logo">T</span><span id="bn"></span></a>
+    <div class="wrap">
+      <a class="brand" href="#"><span class="logo">T</span><span id="bn"></span></a>
       <div id="nav"></div>
     </div>
   </header>
@@ -115,25 +95,23 @@
     // ====== SUPABASE DETAILS ======
     const SUPABASE_URL = "https://drwxtmlpnsqxpkzhdyly.supabase.co";
     const SUPABASE_KEY = "sb_publishable_jedKOEKXmaAZ5S_y21OdZg_BNaY8uqM";
-    const CLUB_NAME = "Toastmasters Voting";
+    const CLUB_NAME    = "Toastmasters Voting";
     // ==============================
 
+    // All voting categories shown to voters & admin
     const CATS = [
       ["best_table_topic",    "Best Table Topic"],
       ["best_prepared_speech","Best Prepared Speech"],
       ["best_evaluator",      "Best Evaluator"],
       ["best_facilitator",    "Best Facilitator"],
-      ["best_tmod",           "Best Toastmaster of the Day (TMOD)"],
-      ["best_ttm",            "Best Table Topic Master"],
-      ["best_ge",             "Best General Evaluator"],
       ["best_of_big_three",   "Best of Big Three"]
     ];
 
-    // Fixed 3 slots inside "Best of Big Three"
+    // Fixed options for "Best of Big Three" — no names needed from admin
     const BIG3 = [
-      ["tmod", "Best TMOD"],
-      ["ttm",  "Best Table Topic Master"],
-      ["ge",   "Best General Evaluator"]
+      "Toastmaster of the Day (TMOD)",
+      "Table Topic Master",
+      "General Evaluator"
     ];
 
     const sb  = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -148,8 +126,8 @@
     let dev = localStorage.getItem("dev");
     if (!dev) { dev = crypto.randomUUID(); localStorage.setItem("dev", dev); }
 
-    const voterUrl  = () => location.origin + location.pathname;
-    const guestNav  = () => nav.innerHTML = `<button class="sec sm" onclick="location.hash='#admin';admin()">Login</button>`;
+    const voterUrl = () => location.origin + location.pathname;
+    const guestNav = () => nav.innerHTML = `<button class="sec sm" onclick="location.hash='#admin';admin()">Login</button>`;
 
     /* ── Results ──────────────────────────────────────────── */
     async function showResults(m, el) {
@@ -157,9 +135,9 @@
       if (error) { el.innerHTML = `<p class="err">${esc(error.message)}</p>`; return; }
       let html = `<div class="card hero"><h1>${esc(m.title)}</h1><div class="sub">${fmt(m.meeting_date)} &middot; Final results</div></div>`;
       for (const [key, label] of CATS) {
-        const rows = (data||[]).filter(r => r.category === key).sort((a,b) => b.votes - a.votes);
+        const rows = (data||[]).filter(r => r.category===key).sort((a,b) => b.votes-a.votes);
         if (!rows.length) continue;
-        const max = rows[0].votes, total = rows.reduce((s,r) => s + Number(r.votes), 0);
+        const max = rows[0].votes, total = rows.reduce((s,r) => s+Number(r.votes), 0);
         html += `<div class="card cat"><h2>${label}<span class="mute">${total} vote${total==1?"":"s"}</span></h2>`
           + rows.map(r => {
               const w = max>0 && r.votes==max, pct = total ? Math.round(r.votes/total*100) : 0;
@@ -186,17 +164,17 @@
       const pendingCats = openCats.filter(([k]) => !localStorage.getItem("voted_"+m.id+"_"+k));
 
       if (openCats.length===0) {
-        app.innerHTML = `<div class="card center hero"><h1>Voting Paused</h1><p class="mute">Voting for <b>${esc(m.title)}</b> is open, but no category is active right now.<br>Please wait for the Toastmaster to announce the voting round.</p><button class="sm sec" onclick="voter()" style="margin-top:14px">Check for Open Categories</button></div>`;
+        app.innerHTML = `<div class="card center hero"><h1>Voting Paused</h1><p class="mute">Voting for <b>${esc(m.title)}</b> is open, but no category is currently active.<br>Please wait for the Toastmaster to announce the voting round.</p><button class="sm sec" onclick="voter()" style="margin-top:14px">Refresh</button></div>`;
         return;
       }
       if (pendingCats.length===0) {
-        app.innerHTML = `<div class="card center hero"><h1>Vote Recorded!</h1><p class="mute">Your vote for the current category in <b>${esc(m.title)}</b> has been recorded.<br>Please wait for the next voting category or final results.</p><button class="sm sec" onclick="voter()" style="margin-top:14px">Check for Next Category</button></div>`;
+        app.innerHTML = `<div class="card center hero"><h1>Vote Recorded!</h1><p class="mute">Your vote for <b>${esc(m.title)}</b> has been recorded.<br>Please wait for the next category or final results.</p><button class="sm sec" onclick="voter()" style="margin-top:14px">Refresh</button></div>`;
         return;
       }
 
       let html = `<div class="card hero"><h1>${esc(m.title)}</h1><div class="sub">${fmt(m.meeting_date)} &middot; Choose one name per category. You may skip any category.</div></div>`;
       for (const [key, label] of pendingCats)
-        html += `<div class="card cat"><h2>${label}</h2>` + cs.filter(c=>c.category===key).map(c=>`<label class="opt"><input type="radio" name="${key}" value="${c.id}">${esc(c.name)}</label>`).join("") + `</div>`;
+        html += `<div class="card cat"><h2>${label}</h2>` + (cs||[]).filter(c=>c.category===key).map(c=>`<label class="opt"><input type="radio" name="${key}" value="${c.id}">${esc(c.name)}</label>`).join("") + `</div>`;
       html += `<div class="sticky"><div class="wrap"><span class="mute" id="cnt"></span><div><span id="msg" class="err"></span> <button id="submit">Submit vote</button></div></div></div>`;
       app.innerHTML = html;
 
@@ -206,9 +184,9 @@
       $("submit").onclick = async () => {
         const rows = pendingCats.map(([key]) => {
           const s = document.querySelector(`input[name="${key}"]:checked`);
-          return s ? { meeting_id: m.id, category: key, candidate_id: s.value, device_id: dev } : null;
+          return s ? { meeting_id:m.id, category:key, candidate_id:s.value, device_id:dev } : null;
         }).filter(Boolean);
-        if (!rows.length) { $("msg").textContent = "Select at least one name."; return; }
+        if (!rows.length) { $("msg").textContent="Select at least one option."; return; }
         const { error } = await sb.from("votes").insert(rows);
         if (error && error.code!=="23505") { $("msg").textContent = error.message.includes("row-level") ? "Voting is closed." : error.message; return; }
         rows.forEach(r => localStorage.setItem("voted_"+m.id+"_"+r.category,"1"));
@@ -239,7 +217,7 @@
 <p id="msg" class="err"></p><button id="go" class="full">Sign in</button>
 <p style="text-align:center;margin-top:14px"><a href="#" class="mute" style="font-size:0.88rem" onclick="location.hash='';voter();return false;">&#8592; Back to voting page</a></p></div>`;
       const go = async () => {
-        const { error } = await sb.auth.signInWithPassword({ email: $("em").value.trim(), password: $("pw").value });
+        const { error } = await sb.auth.signInWithPassword({ email:$("em").value.trim(), password:$("pw").value });
         if (error) $("msg").textContent = error.message; else admin();
       };
       $("go").onclick = go;
@@ -247,12 +225,12 @@
     }
 
     /* ── Admin panel ──────────────────────────────────────── */
-    let curEmail, tab="meetings", curMs=[], curCs=[], editingMeetingId=null;
+    let curEmail, tab="meetings", curMs=[], curCs=[], editingMeetingId=null, newCatDisabled={};
 
     window.go = t => { if (t==="new" && tab!=="new") editingMeetingId=null; tab=t; panel(); };
 
     async function panel(email) {
-      email = email || curEmail; curEmail = email;
+      email = email||curEmail; curEmail = email;
       nav.innerHTML = `<span class="pill">${esc(email)}<b>Admin</b></span><button class="sec sm" onclick="location.hash='';voter()">Vote</button><button class="sec sm" id="out">Log out</button>`;
       $("out").onclick = async () => { await sb.auth.signOut(); location.hash=""; voter(); };
 
@@ -261,7 +239,7 @@
         sb.from("meetings").select("*").order("created_at",{ascending:false}),
         sb.from("candidates").select("id,meeting_id,category,name")
       ]);
-      curMs = ms||[]; curCs = allCs||[];
+      curMs=ms||[]; curCs=allCs||[];
 
       const tabs = [["meetings","Meetings"],["new","New meeting"],["people","Participants"],["qr","QR code"]];
       let b = "";
@@ -289,39 +267,39 @@
       /* ── New / Edit meeting tab ── */
       if (tab==="new") {
         const isEditing = Boolean(editingMeetingId);
-        const editM     = isEditing ? curMs.find(x => x.id===editingMeetingId) : null;
+        const editM     = isEditing ? curMs.find(x=>x.id===editingMeetingId) : null;
         newCatDisabled  = {};
 
-        // Build category cards
+        const enStyle  = "background:#1b7a43;border-color:#1b7a43;color:#fff;padding:3px 10px;font-size:0.75rem";
+        const disStyle = "background:transparent;border-color:var(--line);color:var(--mute);padding:3px 10px;font-size:0.75rem";
+
         const catCards = CATS.map(([k, l]) => {
-          const catCs     = isEditing ? curCs.filter(c => c.meeting_id===editingMeetingId && c.category===k) : [];
+          const catCs = isEditing ? curCs.filter(c=>c.meeting_id===editingMeetingId && c.category===k) : [];
           const isEnabled = isEditing
             ? (Array.isArray(editM && editM.active_categories) ? editM.active_categories.includes(k) : catCs.length>0)
             : true;
           newCatDisabled[k] = !isEnabled;
-
-          const enStyle  = "background:#1b7a43;border-color:#1b7a43;color:#fff;padding:3px 10px;font-size:0.75rem";
-          const disStyle = "background:transparent;border-color:var(--line);color:var(--mute);padding:3px 10px;font-size:0.75rem";
+          const opacity  = isEnabled ? "" : "opacity:0.45;";
           const toggleBtn = `<button type="button" class="sm ${isEnabled?"":"sec"}" id="btn_toggle_${k}" onclick="toggleNewCat('${k}')" style="${isEnabled?enStyle:disStyle}">${isEnabled?"🟢 ENABLED":"⚪ DISABLED"}</button>`;
-          const cardOpacity = isEnabled ? "" : "opacity:0.45;";
 
+          // Best of Big Three — fixed options, no text input
           if (k==="best_of_big_three") {
-            const inputs = BIG3.map(([sub, sublabel], i) =>
-              `<div><label class="f" style="font-size:0.8rem;margin:4px 0 2px">${sublabel}</label>` +
-              `<input type="text" id="c_${k}_${sub}" placeholder="${sublabel} winner name" value="${catCs[i]?esc(catCs[i].name):""}" ${isEnabled?"":"disabled"}></div>`
+            const opts = BIG3.map(name =>
+              `<div style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:0.88rem;color:var(--mute)">${esc(name)}</div>`
             ).join("");
-            return `<div class="card" id="card_${k}" style="padding:12px;margin:6px 0;transition:0.2s;grid-column:1/-1;${cardOpacity}">` +
-              `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">` +
-              `<label class="f" style="margin:0;font-size:0.88rem"><b>Best of Big Three</b></label>${toggleBtn}</div>` +
-              `<p class="mute" style="font-size:0.8rem;margin:4px 0 10px">Enter one winner name per slot — voters choose one of these three:</p>` +
-              `<div class="grid2">${inputs}</div></div>`;
+            return `<div class="card" id="card_${k}" style="padding:12px;margin:6px 0;transition:0.2s;grid-column:1/-1;${opacity}">`
+              + `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">`
+              + `<label class="f" style="margin:0;font-size:0.88rem"><b>Best of Big Three</b></label>${toggleBtn}</div>`
+              + `<p class="mute" style="font-size:0.82rem;margin:0 0 8px">Voters will choose one of these three fixed options:</p>`
+              + `<div class="grid2" style="gap:6px">${opts}</div></div>`;
           }
 
-          const catText = catCs.map(c => c.name).join("\n");
-          return `<div class="card" id="card_${k}" style="padding:12px;margin:6px 0;transition:0.2s;${cardOpacity}">` +
-            `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">` +
-            `<label class="f" for="c_${k}" style="margin:0;font-size:0.88rem"><b>${esc(l)}</b></label>${toggleBtn}</div>` +
-            `<textarea id="c_${k}" rows="3" placeholder="${isEnabled?"Type nominee names (one per line)":"Category disabled for this meeting"}" ${isEnabled?"":"disabled"}>${esc(catText)}</textarea></div>`;
+          // Regular category — textarea for nominee names
+          const catText = catCs.map(c=>c.name).join("\n");
+          return `<div class="card" id="card_${k}" style="padding:12px;margin:6px 0;transition:0.2s;${opacity}">`
+            + `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">`
+            + `<label class="f" for="c_${k}" style="margin:0;font-size:0.88rem"><b>${esc(l)}</b></label>${toggleBtn}</div>`
+            + `<textarea id="c_${k}" rows="3" placeholder="${isEnabled?"Type nominee names (one per line)":"Category disabled for this meeting"}" ${isEnabled?"":"disabled"}>${esc(catText)}</textarea></div>`;
         }).join("");
 
         b = `<div class="card">
@@ -371,22 +349,24 @@
       }
 
       if ($("save")) $("save").onclick = async () => {
-        const title  = $("t").value.trim();
-        const dateVal= $("d").value;
+        const title   = $("t").value.trim();
+        const dateVal = $("d").value;
         if (!title) { $("msg").textContent="Enter a meeting title."; return; }
 
         const rows=[], active_categories=[];
         CATS.forEach(([k]) => {
           if (newCatDisabled[k]) return;
+
           if (k==="best_of_big_three") {
-            const names = BIG3.map(([sub]) => $("c_"+k+"_"+sub)).map(el=>el?el.value.trim():"").filter(Boolean);
-            if (names.length) active_categories.push(k);
-            names.forEach(n => rows.push({category:k, name:n}));
+            // Auto-insert 3 fixed candidates — no admin input needed
+            active_categories.push(k);
+            BIG3.forEach(name => rows.push({category:k, name}));
             return;
           }
+
           const names = $("c_"+k).value.split("\n").map(s=>s.trim()).filter(Boolean);
           if (names.length) active_categories.push(k);
-          names.forEach(n => rows.push({category:k, name:n}));
+          names.forEach(name => rows.push({category:k, name}));
         });
 
         if (editingMeetingId) {
@@ -419,38 +399,29 @@
 
     window.delPart    = async id => { await sb.from("participants").delete().eq("id",id); panel(); };
     window.setStatus  = async (id,status) => { if (status==="open") await sb.from("meetings").update({status:"closed"}).eq("status","open"); await sb.from("meetings").update({status}).eq("id",id); panel(); };
-    window.viewRes    = async id => { const {data} = await sb.from("meetings").select("*").eq("id",id).single(); showResults(data,$("r_"+id)); };
+    window.viewRes    = async id => { const {data}=await sb.from("meetings").select("*").eq("id",id).single(); showResults(data,$("r_"+id)); };
     window.delMeeting = async id => { if (confirm("Delete this meeting and all its votes?")) { await sb.from("meetings").delete().eq("id",id); panel(); } };
     window.editMeeting= id => { editingMeetingId=id; tab="new"; panel(); };
     window.cancelEdit = () => { editingMeetingId=null; tab="meetings"; panel(); };
 
     /* ── Toggle helpers ───────────────────────────────────── */
-    let newCatDisabled = {};
-
     window.toggleNewCat = k => {
       newCatDisabled[k] = !newCatDisabled[k];
       const btn  = $("btn_toggle_"+k);
       const card = $("card_"+k);
-      const inputs = k==="best_of_big_three"
-        ? BIG3.map(([sub]) => $("c_"+k+"_"+sub)).filter(Boolean)
-        : [$("c_"+k)].filter(Boolean);
+      // For best_of_big_three there are no inputs to disable — just toggle card opacity
+      const ta = $("c_"+k);
+      const enStyle  = "background:#1b7a43;border-color:#1b7a43;color:#fff;padding:3px 10px;font-size:0.75rem";
+      const disStyle = "background:transparent;border-color:var(--line);color:var(--mute);padding:3px 10px;font-size:0.75rem";
 
       if (newCatDisabled[k]) {
-        btn.textContent = "⚪ DISABLED";
-        btn.className   = "sm sec";
-        btn.style.background  = "transparent";
-        btn.style.borderColor = "var(--line)";
-        btn.style.color       = "var(--mute)";
-        inputs.forEach(el => { el.disabled=true; if (el.tagName==="TEXTAREA") el.placeholder="Category disabled for this meeting"; });
-        card.style.opacity = "0.45";
+        btn.textContent="⚪ DISABLED"; btn.className="sm sec"; btn.style.cssText=disStyle;
+        if (ta) { ta.disabled=true; ta.placeholder="Category disabled for this meeting"; }
+        card.style.opacity="0.45";
       } else {
-        btn.textContent = "🟢 ENABLED";
-        btn.className   = "sm";
-        btn.style.background  = "#1b7a43";
-        btn.style.borderColor = "#1b7a43";
-        btn.style.color       = "#fff";
-        inputs.forEach(el => { el.disabled=false; if (el.tagName==="TEXTAREA") el.placeholder="Type nominee names (one per line)"; });
-        card.style.opacity = "1";
+        btn.textContent="🟢 ENABLED"; btn.className="sm"; btn.style.cssText=enStyle;
+        if (ta) { ta.disabled=false; ta.placeholder="Type nominee names (one per line)"; }
+        card.style.opacity="1";
       }
     };
 
